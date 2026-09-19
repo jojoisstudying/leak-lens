@@ -128,7 +128,10 @@ st.markdown(
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-    #MainMenu, footer, header { visibility: hidden; }
+    #MainMenu, footer { visibility: hidden; }
+    header[data-testid="stHeader"] { background: transparent; height: 3rem; }
+    header[data-testid="stHeader"] [data-testid="stToolbar"] { visibility: hidden; }
+    header[data-testid="stHeader"] button[kind="header"] { visibility: visible !important; }
 
     :root {
         --accent: #14b8a6;
@@ -318,16 +321,21 @@ st.markdown(
     @media (max-width: 640px) {
         .landing-title { font-size: 1.7rem; }
         .landing-subtitle { font-size: 0.9rem; }
+        .feature-grid { flex-direction: column; align-items: stretch; }
+        .feature-card { width: 100%; }
     }
-    /* Responsif untuk layar sempit / mobile */
-    @media (max-width: 640px) {
-        .main .block-container { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+    /* Responsif untuk layar sempit / mobile & tablet */
+    @media (max-width: 768px) {
+        .main .block-container { padding-left: 0.75rem !important; padding-right: 0.75rem !important; padding-top: 1rem !important; }
         .dash-title { font-size: 1.35rem; }
         .dash-caption, .dash-subtitle { font-size: 0.8rem; }
         div[data-testid="stRadio"] > div { flex-wrap: wrap; width: 100%; }
-        div[data-testid="stRadio"] label { padding: 6px 10px; font-size: 0.8rem; }
-        .kpi-card { min-height: 72px; padding: 10px 12px; }
-        .kpi-value { font-size: 1.1rem; }
+        div[data-testid="stRadio"] label { padding: 8px 10px; font-size: 0.8rem; flex: 1 1 auto; text-align: center; }
+        .kpi-card { min-height: 68px; padding: 10px 12px; }
+        .kpi-value { font-size: 1.05rem; }
+        .leak-hero { font-size: 0.82rem; padding: 12px 14px; }
+        .stButton > button, div[data-testid="stDownloadButton"] > button { min-height: 44px; font-size: 0.9rem; }
+        div[data-testid="column"] { width: 100% !important; flex: 1 1 100% !important; min-width: 100% !important; }
     }
     </style>
     """,
