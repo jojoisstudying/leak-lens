@@ -96,12 +96,19 @@ def _resolve_provider_api_key(provider: str) -> str:
             f"LLM_PROVIDER '{provider}' tidak dikenal. Gunakan: groq, openrouter, openai, anthropic."
         )
     env_name, inline, label = mapping[provider]
-    key = os.getenv(env_name, "").strip() or inline.strip()
+    secrets_val = ""
+    try:
+        secrets_val = str(st.secrets.get(env_name, "")).strip()  # Streamlit Cloud: Settings > Secrets
+    except Exception:
+        pass  # tidak ada secrets.toml (mis. jalan lokal) — abaikan, lanjut pakai .env
+    key = os.getenv(env_name, "").strip() or secrets_val or inline.strip()
     if _is_placeholder_secret(key):
         raise ValueError(
-            f"{label} belum dikonfigurasi. Buat file `{APP_DIR / '.env'}` (salin dari `.env.example`), "
-            f"isi {env_name}=..., dan set LLM_PROVIDER={provider}. "
-            f"Mengedit `.env.example` saja tidak cukup — aplikasi hanya membaca `.env`."
+            f"{label} belum dikonfigurasi. "
+            f"Lokal: buat file `{APP_DIR / '.env'}` (salin dari `.env.example`), isi {env_name}=..., "
+            f"set LLM_PROVIDER={provider}. "
+            f"Di Streamlit Cloud: buka menu app > Settings > Secrets, isi `{env_name} = \"...\"` di sana "
+            f"(file `.env` tidak ikut ter-deploy)."
         )
     return key
 
@@ -1115,12 +1122,54 @@ def render_json_details(title: str, data: Any) -> None:
 
 
 def _markdown_to_html(text: str) -> str:
-    try:
-        import markdown as md_lib
+    """Converter markdown ringan, tanpa dependency eksternal (supaya tidak pernah gagal/fallback mentah)."""
+    lines = text.split("\n")
+    out: list[str] = []
+    list_tag: str | None = None
 
-        return md_lib.markdown(text, extensions=["extra", "nl2br"])
-    except ImportError:
-        return f"<pre style='white-space:pre-wrap;font-family:inherit;margin:0;color:#e2e8f0'>{html.escape(text)}</pre>"
+    def close_list() -> None:
+        nonlocal list_tag
+        if list_tag:
+            out.append(f"</{list_tag}>")
+            list_tag = None
+
+    def inline(s: str) -> str:
+        s = html.escape(s)
+        s = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s)
+        s = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"<em>\1</em>", s)
+        return s
+
+    for raw in lines:
+        line = raw.strip()
+        if not line:
+            close_list()
+            continue
+        m = re.match(r"^(#{2,3})\s+(.*)", line)
+        if m:
+            close_list()
+            tag = "h2" if len(m.group(1)) == 2 else "h3"
+            out.append(f"<{tag}>{inline(m.group(2))}</{tag}>")
+            continue
+        m = re.match(r"^\d+\.\s+(.*)", line)
+        if m:
+            if list_tag != "ol":
+                close_list()
+                out.append("<ol>")
+                list_tag = "ol"
+            out.append(f"<li>{inline(m.group(1))}</li>")
+            continue
+        m = re.match(r"^[-*]\s+(.*)", line)
+        if m:
+            if list_tag != "ul":
+                close_list()
+                out.append("<ul>")
+                list_tag = "ul"
+            out.append(f"<li>{inline(m.group(1))}</li>")
+            continue
+        close_list()
+        out.append(f"<p>{inline(line)}</p>")
+    close_list()
+    return "\n".join(out)
 
 
 def build_printable_report_html(insight_text: str, totals: dict[str, Any]) -> str:
@@ -1132,6 +1181,9 @@ def build_printable_report_html(insight_text: str, totals: dict[str, Any]) -> st
 <style>
   body {{ font-family: -apple-system, Segoe UI, Roboto, sans-serif; color:#1e293b; max-width:800px; margin:32px auto; padding:0 24px; }}
   h1 {{ font-size:1.4rem; border-bottom:2px solid #0f766e; padding-bottom:8px; }}
+  h2, h3 {{ color:#0f172a; margin-top:20px; }}
+  p, li {{ color:#334155; }}
+  strong {{ color:#0f172a; }}
   .meta {{ color:#64748b; font-size:0.85rem; margin-bottom:24px; }}
   .kpi {{ display:flex; gap:16px; flex-wrap:wrap; margin-bottom:24px; }}
   .kpi div {{ border:1px solid #cbd5e1; border-radius:8px; padding:10px 16px; }}
@@ -1252,7 +1304,10 @@ if file_bytes is not None:
     if date_filter_enabled:
         dmin = df_clean["date_parsed"].min().date()
         dmax = df_clean["date_parsed"].max().date()
-        dr = st.sidebar.date_input("Rentang tanggal", value=(dmin, dmax), min_value=dmin, max_value=dmax)
+        dr = st.sidebar.date_input(
+            "Rentang tanggal", value=(dmin, dmax), min_value=dmin, max_value=dmax,
+            key=f"date_range_{file_identity}",
+        )
         if isinstance(dr, date):
             dr = (dr, dr)
     else:
@@ -1260,16 +1315,23 @@ if file_bytes is not None:
 
     channels_all = sorted(df_clean["channel_label"].dropna().unique().tolist())
     if len(channels_all) > 1 or (len(channels_all) == 1 and channels_all[0] != "Unknown"):
-        selected_channels = st.sidebar.multiselect("Outlet / Channel", channels_all, default=channels_all)
+        selected_channels = st.sidebar.multiselect(
+            "Outlet / Channel", channels_all, default=channels_all,
+            key=f"channels_{file_identity}",
+        )
     else:
         selected_channels = channels_all
 
     with st.sidebar.expander("⚙️ Biaya Platform per Channel"):
+        st.caption(
+            "Persentase komisi yang dipotong platform online dari tiap transaksi "
+            "(mis. GoFood/Shopee ambil ~15-20%). Ini mengurangi Net Sales — geser kalau komisi asli beda."
+        )
         fee_overrides: dict[str, float] = {}
         ecomm_channels = [c for c in channels_all if channel_needs_fee(c)]
         if ecomm_channels:
             for ch in ecomm_channels:
-                pct = st.slider(ch, 0, 40, 20, step=1, key=f"fee_{ch}")
+                pct = st.slider(ch, 0, 40, 20, step=1, key=f"fee_{file_identity}_{ch}")
                 fee_overrides[ch] = pct / 100.0
         else:
             st.caption("Tidak ada channel online terdeteksi.")
@@ -1358,7 +1420,7 @@ if file_bytes is not None:
 
     elif nav == "📊 Visual Analytics":
         if filtered.empty:
-            st.warning("Tidak ada data setelah filter.")
+            st.warning("Tidak ada data pada rentang tanggal/channel yang dipilih. Cek filter di sidebar (mungkin masih tersisa dari dataset sebelumnya).")
         else:
             st.plotly_chart(chart_daily_revenue(filtered), use_container_width=True)
             left, right = st.columns(2, gap="medium")
