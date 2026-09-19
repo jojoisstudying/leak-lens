@@ -1,5 +1,5 @@
 """
-UMKM Business Decision Copilot — Streamlit dashboard for Indonesian SMB sales analytics.
+LeakLens — Streamlit dashboard for Indonesian SMB sales analytics.
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ OPENROUTER_MODEL_ALIASES: dict[str, str] = {
     "nvidia/nemotron-3-ultra-free": "nvidia/nemotron-3-ultra-550b-a55b:free",
 }
 
-OPENROUTER_APP_TITLE = os.getenv("OPENROUTER_APP_TITLE", "UMKM Business Decision Copilot")
+OPENROUTER_APP_TITLE = os.getenv("OPENROUTER_APP_TITLE", "LeakLens")
 OPENROUTER_APP_URL = os.getenv("OPENROUTER_APP_URL", "http://localhost:8501")
 
 _ENV_PLACEHOLDER_MARKERS = (
@@ -117,8 +117,8 @@ def _resolve_provider_api_key(provider: str) -> str:
 # Page config
 # ---------------------------------------------------------------------------
 st.set_page_config(
-    page_title="UMKM Business Decision Copilot",
-    page_icon="🇮🇩",
+    page_title="LeakLens",
+    page_icon="🔍",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -273,6 +273,27 @@ st.markdown(
         font-weight: 600 !important;
     }
     div[data-testid="stDownloadButton"] > button:hover { border-color: var(--accent) !important; }
+
+    /* Locked / Paywall Preview */
+    .lock-wrap { position: relative; border-radius: 12px; overflow: hidden; margin: 0.5rem 0 1rem 0; }
+    .lock-content { filter: blur(5px); opacity: 0.55; pointer-events: none; user-select: none; }
+    .lock-overlay {
+        position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: rgba(11,18,32,0.35); text-align: center; padding: 12px;
+    }
+    .lock-overlay .icon { font-size: 1.6rem; margin-bottom: 6px; }
+    .lock-overlay .title { color: #f8fafc; font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
+    .lock-overlay .desc { color: #cbd5e1; font-size: 0.78rem; max-width: 320px; }
+    .plan-badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:0.72rem; font-weight:700; margin-left:8px; vertical-align:middle; }
+    .plan-badge.free { background:#334155; color:#cbd5e1; }
+    .plan-badge.pro { background:linear-gradient(135deg,#f59e0b,#f97316); color:#1e1b0e; }
+    .leak-hero {
+        background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05));
+        border: 1px solid rgba(16,185,129,0.4); border-left: 4px solid #10b981;
+        border-radius: 10px; padding: 14px 20px; margin: 0.75rem 0 1.25rem 0;
+        color: #d1fae5; font-size: 0.9rem;
+    }
+    .leak-hero b { color: #6ee7b7; font-size: 1.05rem; }
 
     /* Landing Page */
     .landing-wrap { max-width: 760px; margin: 3rem auto 1rem auto; text-align: center; }
@@ -765,6 +786,10 @@ def compute_analytics_summary(df: pd.DataFrame) -> dict[str, Any]:
     }
 
 
+def _pct_change(new: float, old: float) -> float | None:
+    return round((new - old) / old * 100, 1) if old > 0 else None
+
+
 def _week_over_week(df: pd.DataFrame) -> dict[str, Any] | None:
     sub = df.dropna(subset=["date_parsed"])
     if sub.empty:
@@ -775,13 +800,29 @@ def _week_over_week(df: pd.DataFrame) -> dict[str, Any] | None:
     prev7_end = max_date - pd.Timedelta(days=7)
     if sub["date_parsed"].min().normalize() > prev7_start:
         return None  # data belum cukup 14 hari untuk dibandingkan
-    last7 = sub[sub["date_parsed"] >= last7_start]["net_sales"].sum()
-    prev7 = sub[(sub["date_parsed"] >= prev7_start) & (sub["date_parsed"] <= prev7_end)]["net_sales"].sum()
-    growth_pct = ((last7 - prev7) / prev7 * 100) if prev7 > 0 else None
+    last7_df = sub[sub["date_parsed"] >= last7_start]
+    prev7_df = sub[(sub["date_parsed"] >= prev7_start) & (sub["date_parsed"] <= prev7_end)]
+    last7, prev7 = last7_df["net_sales"].sum(), prev7_df["net_sales"].sum()
+    last7_orders, prev7_orders = last7_df["order_key"].nunique(), prev7_df["order_key"].nunique()
+    last7_aov = (last7 / last7_orders) if last7_orders else 0
+    prev7_aov = (prev7 / prev7_orders) if prev7_orders else 0
+
+    movers = (
+        last7_df.groupby("sku_label")["net_sales"].sum().rename("last7")
+        .to_frame().join(prev7_df.groupby("sku_label")["net_sales"].sum().rename("prev7"), how="outer").fillna(0)
+    )
+    movers["delta"] = movers["last7"] - movers["prev7"]
+    top_gainer = movers["delta"].idxmax() if not movers.empty else None
+    top_decliner = movers["delta"].idxmin() if not movers.empty else None
+
     return {
         "last_7d_net_sales_idr": round(float(last7), 0),
         "prev_7d_net_sales_idr": round(float(prev7), 0),
-        "growth_pct": round(growth_pct, 1) if growth_pct is not None else None,
+        "growth_pct": _pct_change(last7, prev7),
+        "orders_growth_pct": _pct_change(last7_orders, prev7_orders),
+        "aov_growth_pct": _pct_change(last7_aov, prev7_aov),
+        "top_gainer_sku": top_gainer if top_gainer and movers.loc[top_gainer, "delta"] > 0 else None,
+        "top_decliner_sku": top_decliner if top_decliner and movers.loc[top_decliner, "delta"] < 0 else None,
     }
 
 
@@ -816,8 +857,27 @@ def _peak_hours_table(df: pd.DataFrame) -> list[dict[str, Any]]:
     return agg.sort_values("hour").to_dict(orient="records")
 
 
-def build_insights_prompt(summary: dict[str, Any]) -> str:
+def build_insights_prompt(summary: dict[str, Any], plan: str = "pro") -> str:
     payload = json.dumps(summary, ensure_ascii=False, indent=2)
+    if plan != "pro":
+        return f"""Anda adalah konsultan bisnis untuk UMKM Indonesia (F&B, retail, omnichannel).
+Analisis metrik penjualan berikut (JSON) dan berikan SATU diagnosa paling kritis saja dalam Bahasa Indonesia.
+
+DATA METRIK:
+{payload}
+
+ATURAN OUTPUT (WAJIB — markdown persis struktur ini, JANGAN tambah section lain):
+
+## Diagnosa Utama Bisnis
+**🔴 Masalah Paling Kritis:** ... (1 masalah paling mendesak dari data, dengan angka konkret)
+
+## Peluang Tersembunyi
+**🟢 Satu Peluang:** ... (1 kalimat singkat, jangan detail penuh)
+
+*Upgrade ke Pro untuk Action Plan lengkap, Snapshot Metrik, dan Analisis Kompetitor.*
+
+Angka harus konsisten dengan JSON. Singkat, maksimal 2 kalimat per poin."""
+
     return f"""Anda adalah konsultan bisnis untuk UMKM Indonesia (F&B, retail, omnichannel).
 Analisis metrik penjualan berikut (JSON) dan berikan rekomendasi praktis dalam Bahasa Indonesia.
 
@@ -843,7 +903,7 @@ ATURAN OUTPUT (WAJIB — gunakan markdown persis struktur ini):
 Jangan menambahkan section lain. Angka harus konsisten dengan JSON. Jika data tanggal/jam kurang, sebutkan keterbatasannya secara jujur."""
 
 
-def generate_fallback_insight(summary: dict[str, Any]) -> str:
+def generate_fallback_insight(summary: dict[str, Any], plan: str = "pro") -> str:
     """Insight berbasis aturan dari data asli — dipakai saat LLM gagal/limit, supaya demo tetap jalan."""
     t = summary.get("totals", {})
     pareto = summary.get("pareto_sku", {})
@@ -869,6 +929,16 @@ def generate_fallback_insight(summary: dict[str, Any]) -> str:
         f"Jam **{int(best_hour['hour']):02d}:00** adalah jam puncak (net {format_idr(best_hour['net_sales'])}) — peluang promo terarah di jam ini."
         if best_hour else "Peluang: lengkapi data jam transaksi untuk analisis jam puncak."
     )
+
+    if plan != "pro":
+        return f"""## Diagnosa Utama Bisnis
+**🔴 Masalah Paling Kritis:** {merah}
+
+## Peluang Tersembunyi
+**🟢 Satu Peluang:** {hijau}
+
+*Upgrade ke Pro untuk Action Plan lengkap, Snapshot Metrik, dan Analisis Kompetitor.*"""
+
     return f"""## 3 Diagnosa Utama Bisnis
 1. **🔴 Merah (Masalah Kritis):** {merah}
 2. **🟡 Kuning (Peringatan):** {kuning}
@@ -1073,6 +1143,24 @@ def render_kpi_card(title: str, value: str, subtitle: str = "") -> str:
 """
 
 
+def render_leak_hero(t: dict[str, Any], wow: dict[str, Any] | None) -> None:
+    leak_total = t.get("platform_fees_idr", 0) + t.get("discounts_idr", 0)
+    extra = ""
+    if wow:
+        parts = []
+        if wow.get("top_decliner_sku"):
+            parts.append(f"produk turun: <b>{html.escape(str(wow['top_decliner_sku']))}</b>")
+        if wow.get("top_gainer_sku"):
+            parts.append(f"produk naik: <b>{html.escape(str(wow['top_gainer_sku']))}</b>")
+        if parts:
+            extra = " · " + " · ".join(parts)
+    st.markdown(
+        f"""<div class="leak-hero">💧 <b>Estimasi Kebocoran Terdeteksi: {format_idr(leak_total)}</b>
+        dari biaya platform ({format_idr(t.get('platform_fees_idr', 0))}) + diskon ({format_idr(t.get('discounts_idr', 0))}){extra}</div>""",
+        unsafe_allow_html=True,
+    )
+
+
 def render_kpi_grid_from_totals(t: dict[str, Any], wow: dict[str, Any] | None = None) -> None:
     wow_sub = ""
     if wow and wow.get("growth_pct") is not None:
@@ -1095,8 +1183,8 @@ def render_dashboard_header() -> None:
     st.markdown(
         """
 <div class="dash-header">
-  <h1 class="dash-title">🇮🇩 UMKM Business Decision Copilot</h1>
-  <p class="dash-caption">Upload penjualan CSV/XLSX → bersihkan otomatis → visualisasi → insight LLM untuk keputusan bisnis UMKM.</p>
+  <h1 class="dash-title">🔍 LeakLens</h1>
+  <p class="dash-caption">Upload penjualan CSV/XLSX → LeakLens temukan kekeliruan & kebocoran di data Anda → insight AI untuk keputusan.</p>
   <p class="dash-subtitle">Ringkasan KPI, grafik penjualan, dan rekomendasi AI untuk keputusan operasional harian.</p>
 </div>
         """,
@@ -1190,7 +1278,7 @@ def build_printable_report_html(insight_text: str, totals: dict[str, Any]) -> st
   @media print {{ body {{ margin:0; }} }}
 </style></head>
 <body>
-  <h1>🇮🇩 Laporan Insight Bisnis — UMKM Business Decision Copilot</h1>
+  <h1>🔍 Laporan Insight Bisnis — LeakLens</h1>
   <p class="meta">Dibuat otomatis pada {generated}</p>
   <div class="kpi">
     <div><b>Net Sales</b><br>{format_idr(totals.get('net_sales_idr', 0))}</div>
@@ -1202,6 +1290,83 @@ def build_printable_report_html(insight_text: str, totals: dict[str, Any]) -> st
 </body></html>"""
 
 
+def _resolve_tavily_key() -> str:
+    try:
+        secrets_val = str(st.secrets.get("TAVILY_API_KEY", "")).strip()
+    except Exception:
+        secrets_val = ""
+    key = os.getenv("TAVILY_API_KEY", "").strip() or secrets_val
+    if _is_placeholder_secret(key):
+        raise ValueError(
+            "TAVILY_API_KEY belum dikonfigurasi. Daftar gratis di tavily.com, lalu isi TAVILY_API_KEY "
+            "di `.env` (lokal) atau Settings > Secrets (Streamlit Cloud)."
+        )
+    return key
+
+
+def search_market_products(query: str, max_results: int = 5) -> list[dict[str, str]]:
+    api_key = _resolve_tavily_key()
+    resp = requests.post(
+        "https://api.tavily.com/search",
+        json={"api_key": api_key, "query": query, "search_depth": "basic", "max_results": max_results},
+        timeout=30,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"Tavily API error ({resp.status_code}): {resp.text[:200]}")
+    return [
+        {"title": r.get("title", ""), "url": r.get("url", ""), "content": r.get("content", "")[:400]}
+        for r in resp.json().get("results", [])
+    ]
+
+
+def build_market_analysis_prompt(business_desc: str, results: list[dict[str, str]]) -> str:
+    listing = "\n".join(f"- {r['title']}: {r['content']} ({r['url']})" for r in results) or "(tidak ada hasil pencarian)"
+    return f"""Bisnis/produk pengguna: "{business_desc}"
+
+Hasil pencarian pasar terkait tema produk ini:
+{listing}
+
+Tugas Anda:
+1. **Produk/Bisnis Serupa yang Ditemukan** — sebutkan singkat apa saja yang mirip dari hasil pencarian di atas.
+2. **Peringatan Kemiripan** — kalau ada yang SANGAT mirip (konsep/nama/positioning nyaris sama), beri peringatan tegas beserta alasannya. Kalau tidak ada yang terlalu mirip, katakan aman.
+3. **Diferensiasi yang Disarankan** — 2-3 saran konkret supaya bisnis pengguna beda/menonjol dari yang sudah ada.
+
+Jawab dalam format markdown dengan 3 heading di atas (##), Bahasa Indonesia, ringkas dan actionable."""
+
+
+def split_markdown_sections(text: str) -> list[tuple[str, str]]:
+    """Pecah teks markdown jadi list (heading, body) berdasarkan heading '## '."""
+    sections: list[tuple[str, str]] = []
+    current_head, current_body = None, []
+    for line in text.split("\n"):
+        m = re.match(r"^##\s+(.*)", line.strip())
+        if m:
+            if current_head is not None:
+                sections.append((current_head, "\n".join(current_body).strip()))
+            current_head, current_body = m.group(1), []
+        else:
+            current_body.append(line)
+    if current_head is not None:
+        sections.append((current_head, "\n".join(current_body).strip()))
+    return sections or [("", text)]
+
+
+def render_locked_preview(feature_name: str, teaser_markdown: str, desc: str = "") -> None:
+    teaser_html = _markdown_to_html(teaser_markdown)
+    desc = desc or f"Upgrade ke Pro untuk buka {feature_name} secara penuh."
+    st.markdown(
+        f"""<div class="lock-wrap">
+<div class="lock-content llm-insight-panel">{teaser_html}</div>
+<div class="lock-overlay"><div class="icon">🔒</div><div class="title">{html.escape(feature_name)} — Fitur Pro</div>
+<div class="desc">{html.escape(desc)}</div></div>
+</div>""",
+        unsafe_allow_html=True,
+    )
+    if st.button(f"🔓 Upgrade ke Pro", key=f"upgrade_{feature_name}", type="primary"):
+        st.session_state["plan"] = "pro"
+        st.rerun()
+
+
 def render_llm_insight_panel(text: str) -> None:
     body = _markdown_to_html(text)
     st.markdown(f'<div class="llm-insight-panel">{body}</div>', unsafe_allow_html=True)
@@ -1211,11 +1376,12 @@ def render_landing_page() -> None:
     st.markdown(
         """
 <div class="landing-wrap">
-  <span class="landing-badge">🇮🇩 Dibuat untuk UMKM Indonesia</span>
-  <h1 class="landing-title">Data penjualan berantakan?<br><span>Biar AI yang urus.</span></h1>
+  <span class="landing-badge">🔍 LeakLens — untuk UMKM Indonesia</span>
+  <h1 class="landing-title">Ada kebocoran di data penjualan Anda?<br><span>LeakLens yang temukan.</span></h1>
   <p class="landing-subtitle">
-    Upload CSV/XLSX dari kasir, GoFood, Shopee, atau mana pun — sistem otomatis membersihkan data,
-    hitung KPI, dan kasih rekomendasi bisnis yang bisa dieksekusi besok pagi.
+    Upload CSV/XLSX dari kasir, GoFood, Shopee, atau mana pun — LeakLens otomatis membersihkan data,
+    mendeteksi kekeliruan & kebocoran (biaya tersembunyi, anomali, ketimpangan channel), dan kasih
+    rekomendasi bisnis yang bisa dieksekusi besok pagi.
   </p>
 </div>
 <div class="feature-grid">
@@ -1249,12 +1415,23 @@ if st.session_state.get("page", "landing") == "landing":
     st.stop()
 
 render_dashboard_header()
+_plan_now = st.session_state.get("plan", "free")
+st.markdown(
+    f'<span class="plan-badge {_plan_now}">{"FREE" if _plan_now == "free" else "PRO ✨"}</span>',
+    unsafe_allow_html=True,
+)
 
 with st.sidebar:
     if st.button("← Beranda", use_container_width=False):
         st.session_state["page"] = "landing"
         st.rerun()
     st.header("Data & Konfigurasi")
+    plan = st.selectbox(
+        "🎭 Plan (simulasi demo)", ["free", "pro"],
+        index=["free", "pro"].index(st.session_state.get("plan", "free")),
+        format_func=lambda p: "Free" if p == "free" else "Pro ✨",
+    )
+    st.session_state["plan"] = plan
     try:
         _resolve_provider_api_key(LLM_PROVIDER)
         st.success(f"AI siap ✅ ({LLM_PROVIDER})", icon="✅")
@@ -1281,6 +1458,8 @@ file_identity = f"{file_name}:{len(file_bytes)}" if file_bytes else None
 if file_identity and st.session_state.get("_active_file") != file_identity:
     st.session_state["_active_file"] = file_identity
     st.session_state.pop("llm_insight", None)
+    st.session_state.pop("market_analysis", None)
+    st.session_state.pop("market_sources", None)
     st.session_state["_llm_calls"] = 0
 
 if file_bytes is not None:
@@ -1342,6 +1521,7 @@ if file_bytes is not None:
 
     t = summary.get("totals", {})
     render_kpi_grid_from_totals(t, summary.get("wow_comparison"))
+    render_leak_hero(t, summary.get("wow_comparison"))
     st.write("")
     nav = st.radio(
         "Menu Navigation",
@@ -1355,53 +1535,121 @@ if file_bytes is not None:
         col_main, col_side = st.columns([2, 1], gap="large")
         with col_main:
             render_section_heading("Actionable Business Insights")
+            is_pro = st.session_state.get("plan", "free") == "pro"
             generate = st.button("✨ Generate Insight LLM", type="primary", use_container_width=True)
             st.caption(
                 f"Via **{LLM_PROVIDER}** (`{_effective_llm_model(LLM_PROVIDER)}`) · "
                 "🔒 hanya ringkasan angka yang dikirim ke AI, bukan data transaksi mentah."
+                + ("" if is_pro else " · Plan Free: 1 diagnosa utama. Upgrade ke Pro untuk analisis lengkap.")
             )
+
+            # Regenerate otomatis kalau plan berubah (mis. baru upgrade) — biar dapat versi lengkap
+            if st.session_state.get("_insight_plan") != st.session_state.get("plan", "free"):
+                st.session_state.pop("llm_insight", None)
 
             if generate:
                 last_call = st.session_state.get("_last_llm_ts", 0)
                 calls_used = st.session_state.get("_llm_calls", 0)
+                plan_now = "pro" if is_pro else "free"
                 if time.time() - last_call < 15:
                     st.warning("Mohon tunggu ±15 detik sebelum generate lagi.")
                 elif calls_used >= 8:
                     st.info("Batas generate untuk sesi demo ini tercapai. Hubungi kami untuk akses penuh.")
                 else:
-                    prompt = build_insights_prompt(summary)
+                    prompt = build_insights_prompt(summary, plan_now)
                     with st.spinner(f"Memanggil {LLM_PROVIDER}..."):
                         try:
                             text = call_llm_insights(prompt)
                             st.session_state["llm_insight"] = text
                         except Exception:
-                            st.session_state["llm_insight"] = generate_fallback_insight(summary)
+                            st.session_state["llm_insight"] = generate_fallback_insight(summary, plan_now)
                             st.info("ℹ️ Layanan AI sedang tidak tersedia — menampilkan ringkasan otomatis berbasis data Anda.")
+                    st.session_state["_insight_plan"] = plan_now
                     st.session_state["_last_llm_ts"] = time.time()
                     st.session_state["_llm_calls"] = calls_used + 1
 
             if st.session_state.get("llm_insight"):
-                render_llm_insight_panel(st.session_state["llm_insight"])
-                dl_col1, dl_col2 = st.columns(2)
-                with dl_col1:
-                    st.download_button(
-                        "⬇️ Markdown",
-                        data=st.session_state["llm_insight"].encode("utf-8"),
-                        file_name="insight_bisnis.md",
-                        mime="text/markdown",
-                        use_container_width=True,
+                insight_text = st.session_state["llm_insight"]
+                render_llm_insight_panel(insight_text)
+                if not is_pro:
+                    render_locked_preview(
+                        "Action Plan & Snapshot Lengkap",
+                        "## 3 Action Plan Besok\n1. ...\n2. ...\n3. ...\n\n## Snapshot Metrik Kunci\n- ...",
+                        "Diagnosa gratis ✅ — Action Plan konkret, Snapshot Metrik & Analisis Kompetitor ada di Pro.",
                     )
-                with dl_col2:
-                    report_html = build_printable_report_html(st.session_state["llm_insight"], t)
-                    st.download_button(
-                        "⬇️ Laporan (HTML → PDF)",
-                        data=report_html.encode("utf-8"),
-                        file_name="laporan_insight.html",
-                        mime="text/html",
-                        use_container_width=True,
-                    )
+
+                if is_pro:
+                    dl_col1, dl_col2 = st.columns(2)
+                    with dl_col1:
+                        st.download_button(
+                            "⬇️ Markdown",
+                            data=insight_text.encode("utf-8"),
+                            file_name="insight_bisnis.md",
+                            mime="text/markdown",
+                            use_container_width=True,
+                        )
+                    with dl_col2:
+                        report_html = build_printable_report_html(insight_text, t)
+                        st.download_button(
+                            "⬇️ Laporan (HTML → PDF)",
+                            data=report_html.encode("utf-8"),
+                            file_name="laporan_insight.html",
+                            mime="text/html",
+                            use_container_width=True,
+                        )
+                else:
+                    render_locked_preview("Export Laporan", "⬇️ Unduh Markdown\n\n⬇️ Unduh Laporan HTML/PDF")
             else:
                 st.info("Klik **Generate Insight LLM** untuk melihat Diagnosa, Action Plan, dan Snapshot Metrik.")
+
+            st.divider()
+            render_section_heading("🔎 Analisis Kompetitor & Diferensiasi")
+            if st.session_state.get("plan", "free") != "pro":
+                render_locked_preview(
+                    "Analisis Kompetitor & Diferensiasi",
+                    "## Produk Serupa Ditemukan\nContoh: 3 warung dengan konsep serupa di area Anda...\n\n"
+                    "## Peringatan Kemiripan\nNama/konsep Anda mirip dengan kompetitor X karena...\n\n"
+                    "## Diferensiasi yang Disarankan\n1. ...\n2. ...\n3. ...",
+                    "Cek live ke pasar apakah produk Anda sudah ada yang serupa — fitur Pro (pakai pencarian web real-time).",
+                )
+            else:
+                default_desc = ", ".join(s["sku_label"] for s in summary.get("top_10_skus_by_net_revenue", [])[:3])
+                biz_desc = st.text_input(
+                    "Deskripsi singkat produk/bisnis Anda",
+                    value=f"Produk: {default_desc}" if default_desc else "",
+                    key=f"_biz_desc_{file_identity}",
+                    help="Dipakai sebagai query pencarian pasar. Edit supaya lebih spesifik (mis. tambahkan kategori/lokasi/konsep).",
+                )
+                search_clicked = st.button("🔍 Cari & Bandingkan dengan Pasar")
+    
+                if search_clicked:
+                    last_m = st.session_state.get("_last_market_ts", 0)
+                    m_calls = st.session_state.get("_market_calls", 0)
+                    if not biz_desc.strip():
+                        st.warning("Isi dulu deskripsi produk/bisnisnya.")
+                    elif time.time() - last_m < 15:
+                        st.warning("Mohon tunggu ±15 detik sebelum mencari lagi.")
+                    elif m_calls >= 8:
+                        st.info("Batas pencarian untuk sesi demo ini tercapai.")
+                    else:
+                        with st.spinner("Mencari produk sejenis di pasar..."):
+                            try:
+                                results = search_market_products(biz_desc)
+                                prompt = build_market_analysis_prompt(biz_desc, results)
+                                st.session_state["market_analysis"] = call_llm_insights(prompt)
+                                st.session_state["market_sources"] = results
+                            except Exception as exc:
+                                st.error(f"⚠️ Pencarian pasar gagal: {exc}")
+                        st.session_state["_last_market_ts"] = time.time()
+                        st.session_state["_market_calls"] = m_calls + 1
+    
+                if st.session_state.get("market_analysis"):
+                    render_llm_insight_panel(st.session_state["market_analysis"])
+                    sources = st.session_state.get("market_sources", [])
+                    if sources:
+                        with st.expander("Sumber pencarian"):
+                            for s in sources:
+                                st.markdown(f"- [{s['title']}]({s['url']})")
 
         with col_side:
             render_section_heading("Ringkasan Cepat")
@@ -1461,15 +1709,21 @@ if file_bytes is not None:
             st.dataframe(filtered[display_cols], use_container_width=True, height=440)
         with col_side:
             render_section_heading("Export & Info")
-            csv_bytes = filtered.to_csv(index=False).encode("utf-8-sig")
-            st.download_button(
-                "⬇️ Export CSV Bersih",
-                data=csv_bytes,
-                file_name="umkm_sales_cleaned.csv",
-                mime="text/csv",
-                type="primary",
-                use_container_width=True,
-            )
+            if st.session_state.get("plan", "free") == "pro":
+                csv_bytes = filtered.to_csv(index=False).encode("utf-8-sig")
+                st.download_button(
+                    "⬇️ Export CSV Bersih",
+                    data=csv_bytes,
+                    file_name="umkm_sales_cleaned.csv",
+                    mime="text/csv",
+                    type="primary",
+                    use_container_width=True,
+                )
+            else:
+                render_locked_preview(
+                    "Export CSV Bersih", "⬇️ Export CSV Bersih",
+                    "Lihat data bersihnya gratis — export ke file CSV ada di Pro.",
+                )
             st.caption(f"{meta.get('rows_in', 0)} baris masuk → {meta.get('rows_out', 0)} baris valid setelah dibersihkan.")
             render_json_details("Mapping kolom terdeteksi", meta.get("columns_mapped", {}))
 else:
