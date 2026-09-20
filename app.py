@@ -255,6 +255,23 @@ st.markdown(
     .llm-insight-panel h2, .llm-insight-panel h3 { color: var(--text) !important; margin-top: 1.25rem; margin-bottom: 0.5rem; font-weight: 700; }
     .llm-insight-panel p, .llm-insight-panel li { color: var(--text-dim) !important; }
 
+    /* Kartu diagnosa (Free) */
+    .insight-head { margin: 1rem 0 0.8rem 0; }
+    .insight-title { color: var(--text); font-size: 1.15rem; font-weight: 800; letter-spacing: -0.01em; }
+    .insight-meta { color: var(--text-faint); font-size: 0.78rem; margin-top: 2px; }
+    .insight-cards { display: grid; gap: 12px; margin-bottom: 0.5rem; }
+    .insight-card {
+        background: linear-gradient(160deg, var(--surface-2), var(--surface));
+        border: 1px solid var(--border); border-left: 4px solid var(--accent);
+        border-radius: 12px; padding: 16px 20px;
+    }
+    .insight-card.red { border-left-color: #ef4444; }
+    .insight-card.green { border-left-color: #10b981; }
+    .insight-card .lbl { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); }
+    .insight-card.red .lbl { color: #f87171; }
+    .insight-card.green .lbl { color: #34d399; }
+    .insight-card .txt { color: var(--text); font-size: 0.98rem; line-height: 1.65; margin-top: 6px; }
+
     .saas-details { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.5rem 0.75rem; margin: 0.75rem 0; }
     .saas-details summary { cursor: pointer; font-weight: 600; color: var(--text) !important; padding: 0.4rem 0.2rem; }
     .saas-json { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 0.8rem; color: var(--text-dim) !important; overflow-x: auto; margin: 0.5rem 0 0.25rem 0; white-space: pre-wrap; }
@@ -301,30 +318,123 @@ st.markdown(
     .leak-hero b { color: #6ee7b7; font-size: 1.05rem; }
 
     /* Landing Page */
-    .landing-wrap { max-width: 760px; margin: 3rem auto 1rem auto; text-align: center; }
-    .landing-badge {
+    .lp { max-width: 1120px; margin: 0 auto; }
+    .lp-hero { text-align: center; padding: 3.2rem 0.5rem 0.5rem 0.5rem; }
+    .lp-badge {
         display: inline-block; background: var(--accent-soft); color: var(--accent);
         border: 1px solid rgba(20,184,166,0.35); padding: 5px 14px; border-radius: 999px;
         font-size: 0.78rem; font-weight: 600; margin-bottom: 1.25rem;
     }
-    .landing-title { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text); line-height: 1.15; margin-bottom: 1rem; }
-    .landing-title span { background: linear-gradient(90deg, var(--accent), #6366f1); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    .landing-subtitle { font-size: 1.05rem; color: var(--text-dim); line-height: 1.65; max-width: 560px; margin: 0 auto 2rem auto; }
-    .feature-grid { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 2.5rem; }
-    .feature-card {
+    .lp-title { font-size: 3.3rem; font-weight: 800; letter-spacing: -0.035em; color: var(--text); line-height: 1.1; margin: 0 auto 1.1rem auto; max-width: 820px; }
+    .lp-title em { font-style: normal; background: linear-gradient(90deg, var(--accent), #6366f1); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .lp-sub { font-size: 1.08rem; color: var(--text-dim); line-height: 1.7; max-width: 640px; margin: 0 auto 1.4rem auto; }
+    .lp-trust { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 0.9rem 0 0 0; }
+    .lp-chip {
+        background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+        padding: 5px 12px; border-radius: 999px; font-size: 0.76rem; font-weight: 500;
+    }
+
+    /* Tombol CTA sekunder */
+    .st-key-cta_sample button, .st-key-cta_sample_2 button {
+        background: transparent !important; color: var(--text) !important;
+        border: 1px solid var(--border) !important; box-shadow: none !important;
+    }
+    .st-key-cta_sample button:hover, .st-key-cta_sample_2 button:hover { border-color: var(--accent) !important; }
+
+    /* Mockup dashboard */
+    .lp-mock {
+        max-width: 940px; margin: 2.2rem auto 0 auto; background: var(--surface);
+        border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(20,184,166,0.08);
+    }
+    .lp-mock-bar { display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+    .lp-mock-bar i { width: 10px; height: 10px; border-radius: 50%; background: #334155; display: block; }
+    .lp-mock-bar .u { margin-left: 10px; color: var(--text-faint); font-size: 0.72rem; }
+    .lp-mock-body { padding: 16px; text-align: left; }
+    .lp-mock-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .lp-kpi { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+    .lp-kpi .k { color: var(--text-faint); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+    .lp-kpi .v { color: var(--text); font-size: 1.15rem; font-weight: 800; margin: 2px 0; }
+    .lp-kpi .v.warn { color: #fbbf24; }
+    .lp-kpi .v.down { color: #f87171; }
+    .lp-kpi .s { color: var(--text-faint); font-size: 0.68rem; }
+    .lp-mock-alert {
+        margin-top: 12px; background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05));
+        border: 1px solid rgba(16,185,129,0.4); border-left: 4px solid #10b981; border-radius: 10px;
+        padding: 11px 14px; color: #d1fae5; font-size: 0.8rem; line-height: 1.55;
+    }
+    .lp-mock-alert b { color: #6ee7b7; }
+    .lp-mock-chart { margin-top: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .lp-mock-chart .h { color: var(--text-dim); font-size: 0.74rem; font-weight: 600; margin-bottom: 10px; }
+    .lp-bars { display: flex; align-items: flex-end; gap: 6px; height: 96px; }
+    .lp-bars i { flex: 1; display: block; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, var(--accent), var(--accent-dark)); opacity: 0.9; }
+    .lp-bars i.lo { background: linear-gradient(180deg, #f87171, #b91c1c); }
+    .lp-mock-cap { padding: 0 16px 12px 16px; color: var(--text-faint); font-size: 0.7rem; text-align: center; }
+
+    /* Section umum */
+    .lp-section { margin-top: 4.5rem; }
+    .lp-eyebrow { text-align: center; color: var(--accent); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.6rem; }
+    .lp-h2 { text-align: center; color: var(--text); font-size: 1.85rem; font-weight: 800; letter-spacing: -0.025em; line-height: 1.2; margin: 0 auto 0.7rem auto; max-width: 720px; }
+    .lp-lead { text-align: center; color: var(--text-dim); font-size: 0.98rem; line-height: 1.65; max-width: 640px; margin: 0 auto 2rem auto; }
+    .lp-grid { display: grid; gap: 16px; }
+    .lp-grid.c2 { grid-template-columns: repeat(2, 1fr); }
+    .lp-grid.c3 { grid-template-columns: repeat(3, 1fr); }
+    .lp-grid.c4 { grid-template-columns: repeat(4, 1fr); }
+    .lp-card {
         background: linear-gradient(160deg, var(--surface-2), var(--surface));
-        border: 1px solid var(--border); border-radius: 14px; padding: 20px; width: 220px; text-align: left;
+        border: 1px solid var(--border); border-radius: 14px; padding: 20px;
         transition: transform 0.15s ease, border-color 0.15s ease;
     }
-    .feature-card:hover { transform: translateY(-3px); border-color: var(--accent); }
-    .feature-card .icon { font-size: 1.4rem; margin-bottom: 8px; }
-    .feature-card .title { font-weight: 700; color: var(--text); font-size: 0.92rem; margin-bottom: 4px; }
-    .feature-card .desc { color: var(--text-faint); font-size: 0.8rem; line-height: 1.5; }
+    .lp-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+    .lp-icon {
+        width: 40px; height: 40px; border-radius: 10px; background: var(--accent-soft);
+        display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 12px;
+    }
+    .lp-card .t { color: var(--text); font-weight: 700; font-size: 0.95rem; margin-bottom: 6px; }
+    .lp-card .d { color: var(--text-dim); font-size: 0.84rem; line-height: 1.6; }
+    .lp-tag { display: inline-block; font-size: 0.62rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle; background: linear-gradient(135deg, #f59e0b, #f97316); color: #1e1b0e !important; }
+    .lp-step-n {
+        width: 32px; height: 32px; border-radius: 50%; margin-bottom: 12px; font-size: 0.9rem; font-weight: 800;
+        background: linear-gradient(135deg, var(--accent-dark), var(--accent)); color: #ffffff;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .lp-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 10px 0; }
+
+    /* Paket Free vs Pro */
+    .lp-plan { background: linear-gradient(160deg, var(--surface-2), var(--surface)); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+    .lp-plan.pro { border-color: rgba(245,158,11,0.55); box-shadow: 0 0 0 1px rgba(245,158,11,0.12), 0 10px 30px rgba(245,158,11,0.08); }
+    .lp-plan .n { color: var(--text); font-weight: 800; font-size: 1.2rem; }
+    .lp-plan .p { color: var(--text-dim); font-size: 0.85rem; margin: 2px 0 14px 0; }
+    .lp-plan .li { color: var(--text-dim); font-size: 0.87rem; line-height: 1.5; padding: 8px 0 8px 26px; position: relative; border-top: 1px solid rgba(38,49,77,0.7); }
+    .lp-plan .li::before { content: "✓"; position: absolute; left: 3px; color: var(--accent); font-weight: 800; }
+    .lp-plan.pro .li::before { color: #f59e0b; }
+    .lp-plan .li.off { opacity: 0.5; }
+    .lp-plan .li.off::before { content: "—"; color: var(--text-faint); }
+
+    /* FAQ */
+    .lp-faq { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2px 16px; margin-bottom: 10px; }
+    .lp-faq[open] { border-color: rgba(20,184,166,0.45); }
+    .lp-faq summary { cursor: pointer; font-weight: 600; color: var(--text); padding: 14px 0; font-size: 0.93rem; }
+    .lp-faq div { color: var(--text-dim); font-size: 0.87rem; line-height: 1.65; padding: 0 0 14px 0; }
+
+    /* CTA akhir & footer */
+    .lp-cta { text-align: center; padding: 2.4rem 1.2rem 1.6rem 1.2rem; border: 1px solid var(--border); border-radius: 18px; margin-bottom: 1rem;
+        background: radial-gradient(60% 120% at 50% 0%, rgba(20,184,166,0.16), transparent 70%), var(--surface); }
+    .lp-cta .h { color: var(--text); font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
+    .lp-cta .s { color: var(--text-dim); font-size: 0.95rem; }
+    .lp-footer { text-align: center; color: var(--text-faint); font-size: 0.78rem; margin: 3rem 0 1rem 0; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+
+    @media (max-width: 900px) {
+        .lp-grid.c3, .lp-grid.c4 { grid-template-columns: repeat(2, 1fr); }
+    }
     @media (max-width: 640px) {
-        .landing-title { font-size: 1.7rem; }
-        .landing-subtitle { font-size: 0.9rem; }
-        .feature-grid { flex-direction: column; align-items: stretch; }
-        .feature-card { width: 100%; }
+        .lp-title { font-size: 1.85rem; }
+        .lp-sub { font-size: 0.95rem; }
+        .lp-h2 { font-size: 1.4rem; }
+        .lp-section { margin-top: 3rem; }
+        .lp-hero { padding-top: 1rem; }
+        .lp-grid.c2, .lp-grid.c3, .lp-grid.c4 { grid-template-columns: 1fr; }
+        .lp-mock-kpis { grid-template-columns: repeat(2, 1fr); }
     }
     /* Responsif untuk layar sempit / mobile & tablet */
     @media (max-width: 768px) {
@@ -871,22 +981,19 @@ def build_insights_prompt(summary: dict[str, Any], plan: str = "pro") -> str:
     payload = json.dumps(summary, ensure_ascii=False, indent=2)
     if plan != "pro":
         return f"""Anda adalah konsultan bisnis untuk UMKM Indonesia (F&B, retail, omnichannel).
-Analisis metrik penjualan berikut (JSON) dan berikan SATU diagnosa paling kritis saja dalam Bahasa Indonesia.
+Analisis metrik penjualan berikut (JSON), lalu tulis SATU masalah paling kritis dan SATU peluang tersembunyi.
 
 DATA METRIK:
 {payload}
 
-ATURAN OUTPUT (WAJIB — markdown persis struktur ini, JANGAN tambah section lain):
+FORMAT JAWABAN (WAJIB): balas HANYA dengan satu objek JSON valid, tanpa teks lain dan tanpa code fence:
+{{"masalah": "<teks>", "peluang": "<teks>"}}
 
-## Diagnosa Utama Bisnis
-**🔴 Masalah Paling Kritis:** ... (1 masalah paling mendesak dari data, dengan angka konkret)
-
-## Peluang Tersembunyi
-**🟢 Satu Peluang:** ... (1 kalimat singkat, jangan detail penuh)
-
-*Upgrade ke Pro untuk Action Plan lengkap, Snapshot Metrik, dan Analisis Kompetitor.*
-
-Angka harus konsisten dengan JSON. Singkat, maksimal 2 kalimat per poin."""
+ATURAN ISI:
+- "masalah" dan "peluang" masing-masing 1-2 kalimat, Bahasa Indonesia yang langsung bisa dibaca pemilik usaha.
+- Sebut angka konkret dari data (Rupiah, persen, nama produk/channel/jam puncak).
+- Jangan menulis "...", jangan mengulang instruksi ini, jangan menyebut paket, Pro, atau upgrade.
+- Angka harus konsisten dengan data metrik."""
 
     return f"""Anda adalah konsultan bisnis untuk UMKM Indonesia (F&B, retail, omnichannel).
 Analisis metrik penjualan berikut (JSON) dan berikan rekomendasi praktis dalam Bahasa Indonesia.
@@ -913,7 +1020,7 @@ ATURAN OUTPUT (WAJIB — gunakan markdown persis struktur ini):
 Jangan menambahkan section lain. Angka harus konsisten dengan JSON. Jika data tanggal/jam kurang, sebutkan keterbatasannya secara jujur."""
 
 
-def generate_fallback_insight(summary: dict[str, Any], plan: str = "pro") -> str:
+def generate_fallback_insight(summary: dict[str, Any], plan: str = "pro", as_points: bool = False) -> Any:
     """Insight berbasis aturan dari data asli — dipakai saat LLM gagal/limit, supaya demo tetap jalan."""
     t = summary.get("totals", {})
     pareto = summary.get("pareto_sku", {})
@@ -940,14 +1047,11 @@ def generate_fallback_insight(summary: dict[str, Any], plan: str = "pro") -> str
         if best_hour else "Peluang: lengkapi data jam transaksi untuk analisis jam puncak."
     )
 
+    if as_points:
+        return {"masalah": merah, "peluang": hijau}
+
     if plan != "pro":
-        return f"""## Diagnosa Utama Bisnis
-**🔴 Masalah Paling Kritis:** {merah}
-
-## Peluang Tersembunyi
-**🟢 Satu Peluang:** {hijau}
-
-*Upgrade ke Pro untuk Action Plan lengkap, Snapshot Metrik, dan Analisis Kompetitor.*"""
+        return free_insight_to_markdown({"masalah": merah, "peluang": hijau})
 
     return f"""## 3 Diagnosa Utama Bisnis
 1. **🔴 Merah (Masalah Kritis):** {merah}
@@ -1382,37 +1486,324 @@ def render_llm_insight_panel(text: str) -> None:
     st.markdown(f'<div class="llm-insight-panel">{body}</div>', unsafe_allow_html=True)
 
 
+def free_insight_to_markdown(d: dict[str, Any]) -> str:
+    return (
+        f"## Diagnosa Utama Bisnis\n**🔴 Masalah Paling Kritis:** {d['masalah']}\n\n"
+        f"## Peluang Tersembunyi\n**🟢 Satu Peluang:** {d['peluang']}"
+    )
+
+
+def _extract_json_obj(text: str) -> dict[str, Any] | None:
+    t = re.sub(r"```(?:json)?", "", text or "").strip()
+    s, e = t.find("{"), t.rfind("}")
+    if s == -1 or e <= s:
+        return None
+    try:
+        obj = json.loads(t[s : e + 1])
+    except Exception:
+        return None
+    return obj if isinstance(obj, dict) else None
+
+
+def _clean_insight_text(value: Any) -> str:
+    s = str(value or "")
+    s = re.sub(r"```.*?```", " ", s, flags=re.S).replace("`", "")
+    s = re.sub(r"\s+", " ", s).strip().strip("\"'")
+    if len(s) > 450:  # potong rapi di akhir kalimat
+        cut = s[:450]
+        s = cut[: cut.rfind(". ") + 1] if ". " in cut else cut.rstrip() + "…"
+    return s
+
+
+def _valid_insight_text(s: str) -> bool:
+    if len(s) < 25 or re.search(r"\.{3}|…|<teks>", s):
+        return False
+    return not re.search(r"upgrade|\bpro\b", s, flags=re.I)
+
+
+def generate_free_insight(summary: dict[str, Any]) -> dict[str, Any]:
+    """Diagnosa Free yang selalu siap tampil: AI -> JSON tervalidasi; kalau gagal/tidak valid -> ringkasan berbasis aturan."""
+    pts = generate_fallback_insight(summary, "free", as_points=True)
+    fallback = {"masalah": pts["masalah"], "peluang": pts["peluang"], "source": "rule"}
+    try:
+        raw = call_llm_insights(build_insights_prompt(summary, "free"))
+    except Exception:
+        return fallback
+    obj = _extract_json_obj(raw)
+    if not obj:
+        return fallback
+    masalah = _clean_insight_text(obj.get("masalah"))
+    peluang = _clean_insight_text(obj.get("peluang"))
+    if not (_valid_insight_text(masalah) and _valid_insight_text(peluang)):
+        return fallback
+    return {"masalah": masalah, "peluang": peluang, "source": "ai"}
+
+
+def _inline_md(s: str) -> str:
+    return re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", html.escape(s))
+
+
+def render_free_insight(d: dict[str, Any], totals: dict[str, Any]) -> None:
+    orders = f"{int(totals.get('orders', 0) or 0):,}".replace(",", ".")
+    src_label = "Dianalisis AI" if d.get("source") == "ai" else "Ringkasan otomatis"
+    st.markdown(
+        f"""<div class="insight-head"><div class="insight-title">🩺 Diagnosa Bisnis Anda</div>
+<div class="insight-meta">{src_label} · berdasarkan {orders} order · Net Sales {format_idr(totals.get('net_sales_idr', 0))}</div></div>
+<div class="insight-cards">
+<div class="insight-card red"><div class="lbl">🔴 Masalah paling kritis</div><div class="txt">{_inline_md(d['masalah'])}</div></div>
+<div class="insight-card green"><div class="lbl">🟢 Peluang tersembunyi</div><div class="txt">{_inline_md(d['peluang'])}</div></div>
+</div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def _start_analysis(use_sample: bool = False) -> None:
+    st.session_state["_sample_active"] = use_sample
+    st.session_state["page"] = "dashboard"
+
+
+def _landing_cta(key_start: str, key_sample: str) -> None:
+    _, c1, c2, _ = st.columns([1.2, 1.6, 1.6, 1.2])
+    with c1:
+        st.button("🚀 Mulai Analisis", type="primary", use_container_width=True,
+                  key=key_start, on_click=_start_analysis)
+    with c2:
+        st.button("🎯 Coba dengan Data Contoh", use_container_width=True,
+                  key=key_sample, on_click=_start_analysis, kwargs={"use_sample": True})
+
+
 def render_landing_page() -> None:
+    # ---- Latar landing: glow menyatu ke seluruh layar + area konten lebih lebar ----
     st.markdown(
         """
-<div class="landing-wrap">
-  <span class="landing-badge">🔍 LeakLens — untuk UMKM Indonesia</span>
-  <h1 class="landing-title">Ada kebocoran di data penjualan Anda?<br><span>LeakLens yang temukan.</span></h1>
-  <p class="landing-subtitle">
-    Upload CSV/XLSX dari kasir, GoFood, Shopee, atau mana pun — LeakLens otomatis membersihkan data,
-    mendeteksi kekeliruan & kebocoran (biaya tersembunyi, anomali, ketimpangan channel), dan kasih
-    rekomendasi bisnis yang bisa dieksekusi besok pagi.
-  </p>
-</div>
-<div class="feature-grid">
-  <div class="feature-card"><div class="icon">🧹</div><div class="title">Auto-cleaning</div>
-    <div class="desc">Deteksi kolom & header otomatis, walau format file berantakan.</div></div>
-  <div class="feature-card"><div class="icon">📊</div><div class="title">KPI Instan</div>
-    <div class="desc">Net sales, AOV, biaya platform, tren harian dalam sekali lihat.</div></div>
-  <div class="feature-card"><div class="icon">✨</div><div class="title">Insight AI</div>
-    <div class="desc">Diagnosa & action plan konkret, bukan cuma angka mentah.</div></div>
-</div>
+<style>
+.stApp {
+    background:
+        radial-gradient(1000px 520px at 20% -120px, rgba(20,184,166,0.22), transparent 70%),
+        radial-gradient(900px 500px at 82% -140px, rgba(99,102,241,0.20), transparent 70%),
+        var(--bg) !important;
+}
+[data-testid="stAppViewContainer"] .main, [data-testid="stMain"] { background: transparent !important; }
+.main .block-container, [data-testid="stMainBlockContainer"] { max-width: 1280px !important; }
+</style>
         """,
         unsafe_allow_html=True,
     )
-    st.write("")
-    _, mid, _ = st.columns([1, 1, 1])
-    with mid:
-        if st.button("🚀 Mulai Analisis", type="primary", use_container_width=True):
-            st.session_state["page"] = "dashboard"
-            st.rerun()
+
+    # ---- Hero ----
     st.markdown(
-        '<p style="text-align:center;color:#64748b;font-size:0.8rem;margin-top:0.75rem;">Gratis dicoba — tidak perlu daftar akun.</p>',
+        """
+<div class="lp"><div class="lp-hero">
+<div><div class="lp-badge">🔍 LeakLens — untuk UMKM Indonesia</div></div>
+<div class="lp-title">Ada kebocoran di data penjualan Anda? <em>LeakLens yang temukan.</em></div>
+<div class="lp-sub">Upload CSV/XLSX dari kasir, GoFood, Shopee, atau mana pun. LeakLens otomatis membersihkan data,
+menghitung Net Sales setelah komisi &amp; diskon, menemukan kebocoran, lalu memberi rekomendasi yang bisa dieksekusi besok pagi.</div>
+</div></div>
+        """,
+        unsafe_allow_html=True,
+    )
+    _landing_cta("cta_start", "cta_sample")
+    st.markdown(
+        """
+<div class="lp"><div class="lp-trust">
+<div class="lp-chip">📄 CSV &amp; XLSX</div>
+<div class="lp-chip">🛵 GoFood · Grab · Shopee · Tokopedia</div>
+<div class="lp-chip">🚫 Tanpa daftar akun</div>
+<div class="lp-chip">🔒 Data mentah tidak dikirim ke AI</div>
+<div class="lp-chip">🇮🇩 Bahasa Indonesia</div>
+</div></div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ---- Contoh tampilan ----
+    bars = "".join(
+        f'<i class="{"lo" if i >= 12 else ""}" style="height:{h}%"></i>'
+        for i, h in enumerate([46, 54, 50, 62, 74, 82, 68, 58, 64, 72, 86, 70, 52, 40])
+    )
+    st.markdown(
+        """
+<div class="lp"><div class="lp-mock">
+<div class="lp-mock-bar"><i></i><i></i><i></i><div class="u">LeakLens · ringkasan penjualan</div></div>
+<div class="lp-mock-body">
+<div class="lp-mock-kpis">
+<div class="lp-kpi"><div class="k">Net Sales</div><div class="v">Rp 46,2 jt</div><div class="s">setelah komisi &amp; diskon</div></div>
+<div class="lp-kpi"><div class="k">Biaya Platform</div><div class="v warn">Rp 6,9 jt</div><div class="s">komisi channel online</div></div>
+<div class="lp-kpi"><div class="k">Rata-rata Order</div><div class="v">Rp 52 rb</div><div class="s">per transaksi</div></div>
+<div class="lp-kpi"><div class="k">vs Minggu Lalu</div><div class="v down">−8%</div><div class="s">perlu dicek</div></div>
+</div>
+<div class="lp-mock-alert">💧 <b>Estimasi Kebocoran Terdeteksi: Rp 9,4 jt</b> dari biaya platform (Rp 6,9 jt) + diskon (Rp 2,5 jt)</div>
+<div class="lp-mock-chart"><div class="h">Penjualan harian</div><div class="lp-bars">__BARS__</div></div>
+</div>
+<div class="lp-mock-cap">Contoh tampilan dengan data ilustrasi</div>
+</div></div>
+        """.replace("__BARS__", bars),
+        unsafe_allow_html=True,
+    )
+
+    # ---- Masalah ----
+    st.markdown(
+        """
+<div class="lp"><div class="lp-section">
+<div class="lp-eyebrow">Masalahnya</div>
+<div class="lp-h2">Omzet kelihatan bagus, tapi untungnya tidak terasa?</div>
+<div class="lp-lead">Laporan kasir biasa hanya menampilkan omzet kotor. Padahal uang bisa menguap lewat empat jalur ini.</div>
+<div class="lp-grid c4">
+<div class="lp-card"><div class="lp-icon">💸</div><div class="t">Komisi platform</div>
+<div class="d">GoFood, Shopee, dan channel online lain memotong komisi di setiap transaksi. LeakLens menghitung Net Sales setelah komisi, bukan cuma omzet kotor.</div></div>
+<div class="lp-card"><div class="lp-icon">🏷️</div><div class="t">Diskon yang menumpuk</div>
+<div class="d">Promo terlihat kecil per transaksi, tapi jumlahnya besar di akhir bulan. Lihat selisih gross vs net dalam satu layar.</div></div>
+<div class="lp-card"><div class="lp-icon">📉</div><div class="t">Tren turun tak terasa</div>
+<div class="d">Penjualan minggu ini dibandingkan otomatis dengan minggu lalu, lengkap dengan produk yang naik dan turun.</div></div>
+<div class="lp-card"><div class="lp-icon">🧺</div><div class="t">Terlalu andalkan satu produk</div>
+<div class="d">Analisis Pareto menunjukkan produk mana yang menyumbang mayoritas omzet, dan mana yang hanya numpang lewat.</div></div>
+</div>
+</div></div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ---- Fitur ----
+    st.markdown(
+        """
+<div class="lp"><div class="lp-section">
+<div class="lp-eyebrow">Fitur</div>
+<div class="lp-h2">Dari file berantakan jadi keputusan bisnis</div>
+<div class="lp-lead">Semua langkah berjalan otomatis. Anda cukup upload filenya.</div>
+<div class="lp-grid c3">
+<div class="lp-card"><div class="lp-icon">🧹</div><div class="t">Auto-cleaning</div>
+<div class="d">Baris header dicari sendiri, kolom dikenali walau namanya beda (tanggal/tgl, harga/price), dan baris footer atau kosong dibuang.</div></div>
+<div class="lp-card"><div class="lp-icon">📊</div><div class="t">KPI Instan</div>
+<div class="d">Gross &amp; net sales, rata-rata nilai order, biaya platform, dan tren penjualan dalam sekali lihat.</div></div>
+<div class="lp-card"><div class="lp-icon">💧</div><div class="t">Estimasi Kebocoran</div>
+<div class="d">Total uang yang hilang ke komisi platform dan diskon, dihitung dari data Anda sendiri.</div></div>
+<div class="lp-card"><div class="lp-icon">📈</div><div class="t">Visual Analytics</div>
+<div class="d">Tren penjualan harian, produk terlaris, dan jam ramai untuk membantu atur stok serta jadwal.</div></div>
+<div class="lp-card"><div class="lp-icon">✨</div><div class="t">Insight AI</div>
+<div class="d">Diagnosa dan action plan dalam bahasa yang mudah dipahami, bukan sekadar angka mentah.</div></div>
+<div class="lp-card"><div class="lp-icon">🔎</div><div class="t">Riset Produk Serupa <b class="lp-tag">PRO</b></div>
+<div class="d">Cek lewat pencarian web apakah produk Anda sudah banyak pesaingnya di pasar.</div></div>
+</div>
+</div></div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ---- Cara kerja ----
+    st.markdown(
+        """
+<div class="lp"><div class="lp-section">
+<div class="lp-eyebrow">Cara kerja</div>
+<div class="lp-h2">Tiga langkah, tanpa ribet</div>
+<div class="lp-lead">Tidak perlu daftar akun dan tidak perlu keahlian data.</div>
+<div class="lp-grid c3">
+<div class="lp-card"><div class="lp-step-n">1</div><div class="t">Upload file penjualan</div>
+<div class="d">Ekspor dari kasir atau dashboard GoFood/Shopee, lalu upload CSV/XLSX. Belum punya file? Coba dengan data contoh.</div></div>
+<div class="lp-card"><div class="lp-step-n">2</div><div class="t">Dibersihkan &amp; dihitung otomatis</div>
+<div class="d">Format diseragamkan dan biaya platform diperkirakan per channel. Anda bisa menyesuaikannya lewat slider.</div></div>
+<div class="lp-card"><div class="lp-step-n">3</div><div class="t">Baca diagnosa &amp; eksekusi</div>
+<div class="d">Lihat titik kebocoran, minta insight AI, lalu jalankan action plan yang konkret.</div></div>
+</div>
+</div></div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ---- Format data ----
+    st.markdown(
+        """
+<div class="lp"><div class="lp-section">
+<div class="lp-eyebrow">Format data</div>
+<div class="lp-h2">File Anda tidak perlu rapi</div>
+<div class="lp-lead">LeakLens mengenali nama kolom dalam Bahasa Indonesia maupun Inggris.</div>
+<div class="lp-grid c2">
+<div class="lp-card"><div class="t">📋 Kolom yang dikenali</div>
+<div class="lp-chips">
+<div class="lp-chip">Tanggal</div><div class="lp-chip">Produk / SKU</div><div class="lp-chip">Channel / Outlet</div>
+<div class="lp-chip">Harga</div><div class="lp-chip">Qty / Jumlah</div><div class="lp-chip">Diskon</div><div class="lp-chip">Total penjualan</div>
+</div>
+<div class="d">Jika ada kolom yang bermasalah, peringatannya ditampilkan setelah file dibaca.</div></div>
+<div class="lp-card"><div class="t">🛵 Channel dengan biaya platform</div>
+<div class="lp-chips">
+<div class="lp-chip">GoFood</div><div class="lp-chip">Grab</div><div class="lp-chip">Shopee</div>
+<div class="lp-chip">Tokopedia</div><div class="lp-chip">TikTok</div><div class="lp-chip">Bukalapak</div>
+</div>
+<div class="d">Channel online seperti ini otomatis diberi estimasi komisi 20%. Angkanya bisa Anda ubah (0–40%) di panel Filter.</div></div>
+</div>
+</div></div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ---- Paket ----
+    st.markdown(
+        """
+<div class="lp"><div class="lp-section">
+<div class="lp-eyebrow">Paket</div>
+<div class="lp-h2">Mulai gratis, upgrade kalau butuh lebih</div>
+<div class="lp-lead">Analisis dasar sudah bisa dipakai tanpa biaya. Pro membuka rekomendasi lengkap dan fitur export.</div>
+<div class="lp-grid c2">
+<div class="lp-plan"><div class="n">Free</div><div class="p">Gratis · tanpa daftar akun</div>
+<div class="li">Upload CSV/XLSX + auto-cleaning</div>
+<div class="li">KPI, estimasi kebocoran &amp; grafik analitik</div>
+<div class="li">Filter tanggal &amp; channel, atur biaya platform</div>
+<div class="li">1 diagnosa utama dari AI</div>
+<div class="li">Preview data setelah dibersihkan</div>
+<div class="li off">Action Plan &amp; Snapshot Metrik lengkap</div>
+<div class="li off">Riset produk serupa</div>
+<div class="li off">Export laporan &amp; CSV bersih</div>
+</div>
+<div class="lp-plan pro"><div class="n">Pro <b class="lp-tag">✨ LENGKAP</b></div><div class="p">Harga menyusul · bisa dicoba lewat mode demo di dashboard</div>
+<div class="li">Semua fitur di Free</div>
+<div class="li">Action Plan konkret untuk besok</div>
+<div class="li">Snapshot Metrik Kunci</div>
+<div class="li">Riset produk serupa (pencarian web real-time)</div>
+<div class="li">Export laporan Markdown &amp; HTML → PDF</div>
+<div class="li">Export CSV data bersih</div>
+</div>
+</div>
+</div></div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ---- FAQ ----
+    st.markdown(
+        """
+<div class="lp"><div class="lp-section" style="max-width:760px;margin-left:auto;margin-right:auto;">
+<div class="lp-eyebrow">FAQ</div>
+<div class="lp-h2">Pertanyaan yang sering muncul</div>
+<div style="height:1.2rem"></div>
+<details class="lp-faq"><summary>Apakah perlu daftar akun?</summary>
+<div>Tidak. Anda bisa langsung upload file atau mencoba dengan data contoh.</div></details>
+<details class="lp-faq"><summary>Data apa saja yang dikirim ke AI?</summary>
+<div>Hanya ringkasan angka hasil perhitungan, seperti total penjualan, tren, dan produk teratas. Baris transaksi mentah Anda tidak dikirim.</div></details>
+<details class="lp-faq"><summary>Format file saya berantakan, apakah tetap bisa?</summary>
+<div>Umumnya bisa. LeakLens mencari baris header sendiri, membuang baris kosong atau footer, dan mengenali kolom dari berbagai nama. Yang tetap dibutuhkan: kolom total penjualan, atau harga dan jumlah.</div></details>
+<details class="lp-faq"><summary>Dari mana angka biaya platform berasal?</summary>
+<div>Diperkirakan otomatis dari nama channel (default 20% untuk GoFood, Shopee, dan sejenisnya). Sesuaikan lewat slider agar cocok dengan komisi asli Anda.</div></details>
+<details class="lp-faq"><summary>Seberapa akurat insight AI-nya?</summary>
+<div>Semua angka dihitung langsung dari file Anda; AI membantu menafsirkannya. Tetap cocokkan dengan kondisi di lapangan sebelum mengambil keputusan besar.</div></details>
+<details class="lp-faq"><summary>Apa bedanya Free dan Pro?</summary>
+<div>Free memberi 1 diagnosa utama dari AI. Pro membuka Action Plan lengkap, Snapshot Metrik, riset produk serupa, dan fitur export.</div></details>
+</div></div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ---- CTA akhir & footer ----
+    st.markdown(
+        """
+<div class="lp"><div class="lp-section">
+<div class="lp-cta"><div class="h">Siap cari tahu ke mana uang Anda bocor?</div>
+<div class="s">Gratis dicoba, tidak perlu daftar akun.</div></div>
+</div></div>
+        """,
+        unsafe_allow_html=True,
+    )
+    _landing_cta("cta_start_2", "cta_sample_2")
+    st.markdown(
+        '<div class="lp"><div class="lp-footer">🔍 LeakLens · Dibuat untuk UMKM Indonesia</div></div>',
         unsafe_allow_html=True,
     )
 
@@ -1489,6 +1880,7 @@ file_identity = f"{file_name}:{len(file_bytes)}" if file_bytes else None
 if file_identity and st.session_state.get("_active_file") != file_identity:
     st.session_state["_active_file"] = file_identity
     st.session_state.pop("llm_insight", None)
+    st.session_state.pop("llm_insight_free", None)
     st.session_state.pop("market_analysis", None)
     st.session_state.pop("market_sources", None)
     st.session_state["_llm_calls"] = 0
@@ -1583,6 +1975,7 @@ if file_bytes is not None:
             # Regenerate otomatis kalau plan berubah (mis. baru upgrade) — biar dapat versi lengkap
             if st.session_state.get("_insight_plan") != st.session_state.get("plan", "free"):
                 st.session_state.pop("llm_insight", None)
+                st.session_state.pop("llm_insight_free", None)
 
             if generate:
                 last_call = st.session_state.get("_last_llm_ts", 0)
@@ -1593,21 +1986,32 @@ if file_bytes is not None:
                 elif calls_used >= 8:
                     st.info("Batas generate untuk sesi demo ini tercapai. Hubungi kami untuk akses penuh.")
                 else:
-                    prompt = build_insights_prompt(summary, plan_now)
                     with st.spinner(f"Memanggil {LLM_PROVIDER}..."):
-                        try:
-                            text = call_llm_insights(prompt)
-                            st.session_state["llm_insight"] = text
-                        except Exception:
-                            st.session_state["llm_insight"] = generate_fallback_insight(summary, plan_now)
-                            st.info("ℹ️ Layanan AI sedang tidak tersedia — menampilkan ringkasan otomatis berbasis data Anda.")
+                        if plan_now == "free":
+                            free_data = generate_free_insight(summary)
+                            st.session_state["llm_insight_free"] = free_data
+                            st.session_state["llm_insight"] = free_insight_to_markdown(free_data)
+                            if free_data["source"] == "rule":
+                                st.info("ℹ️ Respons AI tidak tersedia — menampilkan ringkasan otomatis berbasis data Anda.")
+                        else:
+                            st.session_state.pop("llm_insight_free", None)
+                            prompt = build_insights_prompt(summary, plan_now)
+                            try:
+                                text = call_llm_insights(prompt)
+                                st.session_state["llm_insight"] = text
+                            except Exception:
+                                st.session_state["llm_insight"] = generate_fallback_insight(summary, plan_now)
+                                st.info("ℹ️ Layanan AI sedang tidak tersedia — menampilkan ringkasan otomatis berbasis data Anda.")
                     st.session_state["_insight_plan"] = plan_now
                     st.session_state["_last_llm_ts"] = time.time()
                     st.session_state["_llm_calls"] = calls_used + 1
 
             if st.session_state.get("llm_insight"):
                 insight_text = st.session_state["llm_insight"]
-                render_llm_insight_panel(insight_text)
+                if not is_pro and st.session_state.get("llm_insight_free"):
+                    render_free_insight(st.session_state["llm_insight_free"], t)
+                else:
+                    render_llm_insight_panel(insight_text)
                 if not is_pro:
                     render_locked_preview(
                         "Action Plan & Snapshot Lengkap",
