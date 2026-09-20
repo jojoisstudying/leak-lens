@@ -2023,7 +2023,10 @@ if file_bytes is not None:
                 fee_cols = st.columns(min(len(ecomm_channels), 3), gap="large")
                 for i, ch in enumerate(ecomm_channels):
                     with fee_cols[i % len(fee_cols)]:
-                        pct = st.slider(ch, 0, 40, 20, step=1, key=f"fee_{file_identity}_{ch}")
+                        pct = st.number_input(
+                            ch, min_value=0, max_value=100, value=20, step=1,
+                            key=f"fee_{file_identity}_{ch}", format="%d",
+                        )
                         fee_overrides[ch] = pct / 100.0
             else:
                 st.caption("Tidak ada channel online terdeteksi.")
