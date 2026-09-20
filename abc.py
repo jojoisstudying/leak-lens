@@ -502,10 +502,6 @@ COLUMN_ALIASES: dict[str, tuple[str, ...]] = {
         "total_harga",
     ),
     "order_id": ("order_id", "order", "invoice", "no_order", "id_order", "transaction_id", "transaksi_id", "id_transaksi"),
-    "customer_id": (
-        "customer_id", "pelanggan_id", "id_pelanggan", "customer_phone", "no_hp", "nomor_hp",
-        "phone", "no_telepon", "member_id", "id_member", "no_wa", "whatsapp",
-    ),
 }
 
 _HEADER_EXTRA_CELLS = frozenset(
@@ -663,9 +659,6 @@ def generate_sample_sales_csv(seed: int = 42) -> bytes:
     rng = random.Random(seed)
     skus = ["Nasi Goreng", "Ayam Geprek", "Es Teh Manis", "Mie Ayam", "Kopi Susu", "Cireng", "Bakso Urat"]
     channels = ["Tunai", "GoFood", "ShopeeFood", "GrabFood", "QRIS"]
-    loyal_customers = [f"0812-{7000+i:04d}-{9000+i:04d}" for i in range(15)]
-    active_customers = loyal_customers[:13]  # tetap belanja sampai akhir periode
-    overdue_customers = loyal_customers[13:]  # sengaja berhenti belanja di tengah -> demo "overdue"
     rows = []
     start = date(2025, 8, 1)
     for d in range(45):
@@ -680,9 +673,6 @@ def generate_sample_sales_csv(seed: int = 42) -> bytes:
             hour = rng.choices(range(9, 22), weights=[2,3,4,6,10,8,5,4,6,9,10,7,3])[0]
             ts = cur + pd.Timedelta(hours=int(hour), minutes=rng.randint(0, 59))
             discount = rng.choice([0, 0, 0, 1000, 2000])
-            no_hp = ""
-            if rng.random() < 0.35:
-                no_hp = rng.choice(loyal_customers) if d < 20 else rng.choice(active_customers)
             rows.append({
                 "tanggal": ts.strftime("%Y-%m-%d %H:%M"),
                 "produk": sku,
@@ -690,7 +680,6 @@ def generate_sample_sales_csv(seed: int = 42) -> bytes:
                 "jumlah": qty,
                 "diskon": discount,
                 "channel": channel,
-                "no_hp": no_hp,
             })
     df = pd.DataFrame(rows)
     return df.to_csv(index=False).encode("utf-8")
@@ -842,11 +831,6 @@ def load_and_clean_sales(file_bytes: bytes, file_name: str) -> tuple[pd.DataFram
         if orig_roles.get("order_id")
         else df.index.astype(str) + "_" + df["date_parsed"].astype(str)
     )
-    df["customer_id_clean"] = (
-        df[orig_roles["customer_id"]].astype(str).str.strip()
-        if orig_roles.get("customer_id")
-        else pd.NA
-    )
 
     meta["rows_out"] = len(df)
     return df, meta
@@ -919,47 +903,6 @@ def compute_analytics_summary(df: pd.DataFrame) -> dict[str, Any]:
         "pareto_sku": pareto_info,
         "channel_mix_top": channel_mix,
         "peak_hours": peak,
-        "customer_retention": compute_customer_retention(df),
-    }
-
-
-def compute_customer_retention(df: pd.DataFrame, overdue_multiplier: float = 2.0) -> dict[str, Any]:
-    """RFM sederhana: rata-rata siklus beli per pelanggan + deteksi yang 'overdue' (telat >2x siklus normalnya)."""
-    if "customer_id_clean" not in df.columns or df["customer_id_clean"].isna().all():
-        return {"has_customer_data": False}
-
-    sub = df.dropna(subset=["customer_id_clean", "date_parsed"]).copy()
-    sub = sub[sub["customer_id_clean"].astype(str).str.strip() != ""]
-    if sub.empty:
-        return {"has_customer_data": False}
-
-    ref_date = sub["date_parsed"].max()
-    per_customer = []
-    for cust_id, grp in sub.groupby("customer_id_clean"):
-        dates = grp["date_parsed"].sort_values().unique()
-        if len(dates) < 2:
-            continue  # bukan repeat customer, gak bisa dihitung siklusnya
-        diffs_days = np.diff(dates).astype("timedelta64[s]").astype(float) / 86400
-        avg_cycle = float(np.mean(diffs_days))
-        days_since_last = (ref_date - pd.Timestamp(dates[-1])).total_seconds() / 86400
-        if avg_cycle > 0:
-            per_customer.append({
-                "customer_id": str(cust_id), "avg_cycle_days": round(avg_cycle, 1),
-                "days_since_last": round(days_since_last, 1),
-                "overdue": days_since_last > avg_cycle * overdue_multiplier,
-            })
-
-    if not per_customer:
-        return {"has_customer_data": False}
-
-    overdue_list = [c for c in per_customer if c["overdue"]]
-    return {
-        "has_customer_data": True,
-        "repeat_customers": len(per_customer),
-        "avg_cycle_days": round(float(np.mean([c["avg_cycle_days"] for c in per_customer])), 1),
-        "overdue_count": len(overdue_list),
-        "avg_overdue_days": round(float(np.mean([c["days_since_last"] for c in overdue_list])), 1) if overdue_list else 0,
-        "overdue_sample": sorted(overdue_list, key=lambda c: -c["days_since_last"])[:5],
     }
 
 
@@ -1134,8 +1077,7 @@ def _chat_completions_request(
     model: str,
     prompt: str,
     provider_label: str,
-    max_tokens: int = 4096,
-    extra_body: dict[str, Any] | None = None,
+    max_tokens: int = 2048,
 ) -> str:
     body = {
         "model": model,
@@ -1145,7 +1087,6 @@ def _chat_completions_request(
         ],
         "temperature": 0.4,
         "max_tokens": max_tokens,
-        **(extra_body or {}),
     }
     resp = requests.post(url, headers=headers, json=body, timeout=120)
     if resp.status_code >= 400:
@@ -1155,11 +1096,7 @@ def _chat_completions_request(
             err = resp.text
         raise RuntimeError(f"{provider_label} API error ({resp.status_code}): {err}")
     data = resp.json()
-    choice = data["choices"][0]
-    text = choice["message"]["content"].strip()
-    if choice.get("finish_reason") == "length":
-        text += "\n\n*(⚠️ Jawaban terpotong karena batas token model — coba klik Generate lagi.)*"
-    return text
+    return data["choices"][0]["message"]["content"].strip()
 
 
 def call_llm_insights(prompt: str) -> str:
@@ -1176,7 +1113,7 @@ def call_llm_insights(prompt: str) -> str:
         }
         body = {
             "model": model,
-            "max_tokens": 4096,
+            "max_tokens": 2048,
             "system": "Anda analis bisnis UMKM Indonesia. Jawab dalam Bahasa Indonesia.",
             "messages": [{"role": "user", "content": prompt}],
         }
@@ -1204,8 +1141,7 @@ def call_llm_insights(prompt: str) -> str:
         headers["HTTP-Referer"] = OPENROUTER_APP_URL
         headers["X-Title"] = OPENROUTER_APP_TITLE
 
-    extra_body = {"reasoning": {"exclude": True}} if provider == "openrouter" else None
-    return _chat_completions_request(url, headers, model, prompt, provider.capitalize(), extra_body=extra_body)
+    return _chat_completions_request(url, headers, model, prompt, provider.capitalize())
 
 
 def apply_fee_overrides(df: pd.DataFrame, overrides: dict[str, float]) -> pd.DataFrame:
@@ -1333,28 +1269,8 @@ def render_leak_hero(t: dict[str, Any], wow: dict[str, Any] | None) -> None:
         if parts:
             extra = " · " + " · ".join(parts)
     st.markdown(
-        f"""<div class="leak-hero">💰 <b>Estimated Opportunity (Recoverable Revenue): {format_idr(leak_total)}</b>
+        f"""<div class="leak-hero">💧 <b>Estimasi Kebocoran Terdeteksi: {format_idr(leak_total)}</b>
         dari biaya platform ({format_idr(t.get('platform_fees_idr', 0))}) + diskon ({format_idr(t.get('discounts_idr', 0))}){extra}</div>""",
-        unsafe_allow_html=True,
-    )
-
-
-def render_retention_hero(retention: dict[str, Any]) -> None:
-    if not retention.get("has_customer_data"):
-        st.caption(
-            "🔁 Customer Retention Leaks: butuh kolom ID pelanggan/No. HP dengan histori pembelian berulang "
-            "di data Anda — belum terdeteksi di file ini."
-        )
-        return
-    overdue = retention.get("overdue_count", 0)
-    st.markdown(
-        f"""<div class="leak-hero">🔁 <b>{retention['repeat_customers']} pelanggan setia</b> terdeteksi,
-        rata-rata kembali tiap <b>{retention['avg_cycle_days']:.0f} hari</b>. """
-        + (
-            f"<b>{overdue} pelanggan overdue</b> (&gt;2x siklus normal, rata-rata telat {retention['avg_overdue_days']:.0f} hari) — peluang win-back."
-            if overdue else "Tidak ada yang overdue saat ini — retensi sehat."
-        )
-        + "</div>",
         unsafe_allow_html=True,
     )
 
@@ -2035,7 +1951,6 @@ if file_bytes is not None:
     t = summary.get("totals", {})
     render_kpi_grid_from_totals(t, summary.get("wow_comparison"))
     render_leak_hero(t, summary.get("wow_comparison"))
-    render_retention_hero(summary.get("customer_retention", {}))
     st.write("")
     nav = st.radio(
         "Menu Navigation",
