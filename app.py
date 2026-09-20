@@ -120,7 +120,7 @@ st.set_page_config(
     page_title="LeakLens",
     page_icon="🔍",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 st.markdown(
@@ -131,7 +131,12 @@ st.markdown(
     #MainMenu, footer { visibility: hidden; }
     header[data-testid="stHeader"] { background: transparent; height: 3rem; }
     header[data-testid="stHeader"] [data-testid="stToolbar"] { visibility: hidden; }
-    header[data-testid="stHeader"] button[kind="header"] { visibility: visible !important; }
+
+    /* Sidebar bawaan Streamlit tidak dipakai — input data ada di tengah halaman */
+    section[data-testid="stSidebar"],
+    div[data-testid="stSidebarCollapsedControl"],
+    div[data-testid="collapsedControl"],
+    button[data-testid="stExpandSidebarButton"] { display: none !important; }
 
     :root {
         --accent: #14b8a6;
@@ -155,18 +160,11 @@ st.markdown(
 
     /* Header dengan aksen gradient */
     .dash-header {
+        margin-top: 2.75rem;  /* ruang untuk garis aksen di atas & tombol Beranda */
         margin-bottom: 1.75rem;
         padding-bottom: 1.25rem;
         border-bottom: 1px solid var(--border);
         position: relative;
-    }
-    .dash-header::before {
-        content: "";
-        position: absolute;
-        top: -2rem; left: -2rem;
-        width: 64px; height: 4px;
-        border-radius: 4px;
-        background: linear-gradient(90deg, var(--accent), #6366f1);
     }
     .dash-title {
         color: var(--text) !important;
@@ -204,23 +202,27 @@ st.markdown(
         box-shadow: 0 2px 8px rgba(20, 184, 166, 0.35);
     }
 
-    section[data-testid="stSidebar"] {
-        background-color: var(--surface);
-        border-right: 1px solid var(--border);
+    /* Panel input & filter di tengah halaman (pengganti sidebar) */
+    .st-key-input_panel, .st-key-filter_panel {
+        background: linear-gradient(160deg, var(--surface-2), var(--surface));
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.1rem 1.25rem 0.9rem 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
     }
-    section[data-testid="stSidebar"] .stMarkdown,
-    section[data-testid="stSidebar"] label,
-    section[data-testid="stSidebar"] span,
-    section[data-testid="stSidebar"] p { color: var(--text) !important; }
+    .st-key-input_panel label p, .st-key-filter_panel label p { color: var(--text) !important; }
+    .panel-title { color: var(--text) !important; font-size: 1.05rem; font-weight: 700; margin: 0 0 0.2rem 0; }
+    .panel-sub { color: var(--text-faint) !important; font-size: 0.85rem; margin: 0 0 0.9rem 0; }
 
     /* Dropzone upload */
-    section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {
-        background: var(--surface-2);
+    [data-testid="stFileUploaderDropzone"] {
+        background: var(--surface);
         border: 1.5px dashed var(--border);
         border-radius: 10px;
         transition: border-color 0.15s ease;
     }
-    section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"]:hover { border-color: var(--accent); }
+    [data-testid="stFileUploaderDropzone"]:hover { border-color: var(--accent); }
 
     /* Headings & KPI Cards */
     .section-heading { color: var(--text) !important; font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; margin: 0.5rem 0 1rem 0; }
@@ -1422,31 +1424,42 @@ if st.session_state.get("page", "landing") == "landing":
     render_landing_page()
     st.stop()
 
+if st.button("← Beranda"):
+    st.session_state["page"] = "landing"
+    st.rerun()
+
 render_dashboard_header()
+
+# ---- Panel input data: di tengah halaman ----
+with st.container(key="input_panel"):
+    st.markdown(
+        '<div class="panel-title">📁 Data & Konfigurasi</div>'
+        '<div class="panel-sub">Upload file penjualan (CSV/XLSX), atau coba dulu dengan data contoh.</div>',
+        unsafe_allow_html=True,
+    )
+    up_col, cfg_col = st.columns([3, 2], gap="large")
+    with up_col:
+        uploaded = st.file_uploader("Upload file penjualan", type=["csv", "xlsx"])
+    with cfg_col:
+        use_sample = st.button("🎯 Coba dengan Data Contoh", use_container_width=True)
+        plan = st.selectbox(
+            "🎭 Plan (simulasi demo)", ["free", "pro"],
+            index=["free", "pro"].index(st.session_state.get("plan", "free")),
+            format_func=lambda p: "Free" if p == "free" else "Pro ✨",
+        )
+        st.session_state["plan"] = plan
+        try:
+            _resolve_provider_api_key(LLM_PROVIDER)
+            st.caption(f"✅ AI siap ({LLM_PROVIDER})")
+        except Exception:
+            st.caption(f"⚠️ AI belum dikonfigurasi ({LLM_PROVIDER}) — insight akan pakai mode fallback.")
+    warn_slot = st.container()  # diisi peringatan hasil cleaning setelah file dibaca
+
 _plan_now = st.session_state.get("plan", "free")
 st.markdown(
     f'<span class="plan-badge {_plan_now}">{"FREE" if _plan_now == "free" else "PRO ✨"}</span>',
     unsafe_allow_html=True,
 )
-
-with st.sidebar:
-    if st.button("← Beranda", use_container_width=False):
-        st.session_state["page"] = "landing"
-        st.rerun()
-    st.header("Data & Konfigurasi")
-    plan = st.selectbox(
-        "🎭 Plan (simulasi demo)", ["free", "pro"],
-        index=["free", "pro"].index(st.session_state.get("plan", "free")),
-        format_func=lambda p: "Free" if p == "free" else "Pro ✨",
-    )
-    st.session_state["plan"] = plan
-    try:
-        _resolve_provider_api_key(LLM_PROVIDER)
-        st.success(f"AI siap ✅ ({LLM_PROVIDER})", icon="✅")
-    except Exception:
-        st.warning(f"AI belum dikonfigurasi ⚠️ ({LLM_PROVIDER}) — insight akan pakai mode fallback.", icon="⚠️")
-    uploaded = st.file_uploader("Upload file penjualan", type=["csv", "xlsx"])
-    use_sample = st.button("🎯 Coba dengan Data Contoh", use_container_width=True)
 
 df_clean: pd.DataFrame | None = None
 meta: dict[str, Any] = {}
@@ -1454,7 +1467,17 @@ filtered: pd.DataFrame | None = None
 
 file_bytes = None
 file_name = None
+if uploaded is not None:
+    _up_id = f"{uploaded.name}:{uploaded.size}"
+    if st.session_state.get("_last_upload_id") != _up_id:  # file baru -> lepas mode data contoh
+        st.session_state["_last_upload_id"] = _up_id
+        st.session_state["_sample_active"] = False
+else:
+    st.session_state["_last_upload_id"] = None
 if use_sample:
+    st.session_state["_sample_active"] = True
+
+if st.session_state.get("_sample_active"):
     file_bytes = generate_sample_sales_csv()
     file_name = "sample_umkm_sales.csv"
 elif uploaded is not None:
@@ -1480,48 +1503,54 @@ if file_bytes is not None:
         st.error("⚠️ Terjadi kendala saat memproses file. Coba periksa format kolom, atau gunakan Data Contoh.")
         st.stop()
 
-    if meta.get("warnings"):
-        for w in meta["warnings"]:
-            st.sidebar.warning(w)
+    with warn_slot:
+        for w in meta.get("warnings", []):
+            st.warning(w)
 
-    st.sidebar.divider()
-    st.sidebar.subheader("Filter")
-    date_filter_enabled = df_clean["date_parsed"].notna().any()
-    dr: tuple[date | None, date | None] | None = None
-    if date_filter_enabled:
-        dmin = df_clean["date_parsed"].min().date()
-        dmax = df_clean["date_parsed"].max().date()
-        dr = st.sidebar.date_input(
-            "Rentang tanggal", value=(dmin, dmax), min_value=dmin, max_value=dmax,
-            key=f"date_range_{file_identity}",
-        )
-        if isinstance(dr, date):
-            dr = (dr, dr)
-    else:
-        st.sidebar.info("Filter tanggal nonaktif — kolom tanggal tidak valid.")
+    with st.container(key="filter_panel"):
+        st.markdown('<div class="panel-title">🎛️ Filter</div>', unsafe_allow_html=True)
+        date_filter_enabled = df_clean["date_parsed"].notna().any()
+        dr: tuple[date | None, date | None] | None = None
+        f_date, f_chan = st.columns(2, gap="large")
+        with f_date:
+            if date_filter_enabled:
+                dmin = df_clean["date_parsed"].min().date()
+                dmax = df_clean["date_parsed"].max().date()
+                dr = st.date_input(
+                    "Rentang tanggal", value=(dmin, dmax), min_value=dmin, max_value=dmax,
+                    key=f"date_range_{file_identity}",
+                )
+                if isinstance(dr, date):
+                    dr = (dr, dr)
+                elif isinstance(dr, (list, tuple)) and len(dr) == 1:  # user baru pilih tanggal awal
+                    dr = (dr[0], dr[0])
+            else:
+                st.info("Filter tanggal nonaktif — kolom tanggal tidak valid.")
+        with f_chan:
+            channels_all = sorted(df_clean["channel_label"].dropna().unique().tolist())
+            if len(channels_all) > 1 or (len(channels_all) == 1 and channels_all[0] != "Unknown"):
+                selected_channels = st.multiselect(
+                    "Outlet / Channel", channels_all, default=channels_all,
+                    key=f"channels_{file_identity}",
+                )
+            else:
+                selected_channels = channels_all
 
-    channels_all = sorted(df_clean["channel_label"].dropna().unique().tolist())
-    if len(channels_all) > 1 or (len(channels_all) == 1 and channels_all[0] != "Unknown"):
-        selected_channels = st.sidebar.multiselect(
-            "Outlet / Channel", channels_all, default=channels_all,
-            key=f"channels_{file_identity}",
-        )
-    else:
-        selected_channels = channels_all
-
-    with st.sidebar.expander("⚙️ Biaya Platform per Channel"):
-        st.caption(
-            "Persentase komisi yang dipotong platform online dari tiap transaksi "
-            "(mis. GoFood/Shopee ambil ~15-20%). Ini mengurangi Net Sales — geser kalau komisi asli beda."
-        )
-        fee_overrides: dict[str, float] = {}
-        ecomm_channels = [c for c in channels_all if channel_needs_fee(c)]
-        if ecomm_channels:
-            for ch in ecomm_channels:
-                pct = st.slider(ch, 0, 40, 20, step=1, key=f"fee_{file_identity}_{ch}")
-                fee_overrides[ch] = pct / 100.0
-        else:
-            st.caption("Tidak ada channel online terdeteksi.")
+        with st.expander("⚙️ Biaya Platform per Channel"):
+            st.caption(
+                "Persentase komisi yang dipotong platform online dari tiap transaksi "
+                "(mis. GoFood/Shopee ambil ~15-20%). Ini mengurangi Net Sales — geser kalau komisi asli beda."
+            )
+            fee_overrides: dict[str, float] = {}
+            ecomm_channels = [c for c in channels_all if channel_needs_fee(c)]
+            if ecomm_channels:
+                fee_cols = st.columns(min(len(ecomm_channels), 3), gap="large")
+                for i, ch in enumerate(ecomm_channels):
+                    with fee_cols[i % len(fee_cols)]:
+                        pct = st.slider(ch, 0, 40, 20, step=1, key=f"fee_{file_identity}_{ch}")
+                        fee_overrides[ch] = pct / 100.0
+            else:
+                st.caption("Tidak ada channel online terdeteksi.")
 
     df_clean = apply_fee_overrides(df_clean, fee_overrides)
     filtered = apply_filters(df_clean, dr if date_filter_enabled else None, selected_channels if selected_channels else None)
@@ -1676,7 +1705,7 @@ if file_bytes is not None:
 
     elif nav == "📊 Visual Analytics":
         if filtered.empty:
-            st.warning("Tidak ada data pada rentang tanggal/channel yang dipilih. Cek filter di sidebar (mungkin masih tersisa dari dataset sebelumnya).")
+            st.warning("Tidak ada data pada rentang tanggal/channel yang dipilih. Cek filter di atas (mungkin masih tersisa dari dataset sebelumnya).")
         else:
             st.plotly_chart(chart_daily_revenue(filtered), use_container_width=True)
             left, right = st.columns(2, gap="medium")
@@ -1743,9 +1772,9 @@ else:
     Ubah data penjualan mentah jadi keputusan bisnis dalam &lt; 1 menit.
   </p>
   <p style="color:#94a3b8;font-size:0.9rem;line-height:1.65;margin:0;">
-    Upload CSV/XLSX penjualan Anda (Excel kasir, laporan GoFood/Shopee, dll) di sidebar kiri —
+    Upload CSV/XLSX penjualan Anda (Excel kasir, laporan GoFood/Shopee, dll) di panel di atas —
     sistem otomatis membersihkan data, menghitung KPI, dan memberi rekomendasi AI yang bisa
-    langsung dieksekusi besok. Belum punya file? Klik <b style="color:#14b8a6;">🎯 Coba dengan Data Contoh</b> di sidebar.
+    langsung dieksekusi besok. Belum punya file? Klik <b style="color:#14b8a6;">🎯 Coba dengan Data Contoh</b> di panel di atas.
   </p>
 </div>
         """,
